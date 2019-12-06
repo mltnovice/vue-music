@@ -1,0 +1,226 @@
+<template>
+  <div class="music-list">
+    <div class="back" @click="back">
+      <i class="icon-back"></i>
+    </div>
+    <h1 class="title">{{title}}</h1>
+    <div class="bg-image" :style="bgStyle" ref="bgImg">
+      <div class="play-wrapper">
+        <div class="play" v-show="songs.length > 0" ref="play" @click="random">
+          <i class="icon-play"></i>
+          <span class="text-play">随机播放全部</span>
+        </div>
+      </div>
+      <div class="filter" ref="filter"></div>
+    </div>
+    <div class="bg-layer" ref="layer"></div>
+    <scroll
+      :probe-type="probeType"
+      :listen-scroll="listenScroll"
+      :data="songs"
+      class="list"
+      ref="list"
+      @scroll="scroll"
+    >
+      <div class="song-list-wrapper">
+        <song-list :songs="songs" :rank="rank" @select="selectItem"></song-list>
+      </div>
+      <div class="loading-container" v-show="!songs.length">
+        <loading></loading>
+      </div>
+    </scroll>
+  </div>
+</template>
+
+<script>
+import SongList from '@/base/song-list/song-list'
+import Scroll from '@/base/scroll/scroll'
+import Loading from '@/base/loading/loading'
+import { prefixStyle } from '@/common/js/dom'
+import { mapActions } from 'vuex'
+import { playListMixin } from '@/common/js/mixin'
+
+const RESERVED_HEIGHT = 40
+const transform = prefixStyle('transform')
+const backdrop = prefixStyle('backdrop-filter')
+
+export default {
+  name: 'music-list',
+  props: {
+    bgImage: {
+      type: String,
+      default: ''
+    },
+    songs: {
+      type: Array,
+      default () {
+        return {}
+      }
+    },
+    title: {
+      type: String,
+      default: ''
+    },
+    rank: {
+      type: Boolean,
+      default: false
+    }
+  },
+  mixins: [playListMixin],
+  data () {
+    return {
+      scrollY: 0
+    }
+  },
+  computed: {
+    bgStyle () {
+      return `background-image: url(${this.bgImage})`
+    }
+  },
+  methods: {
+    handlePlayList (playList) {
+      const bottom = playList.length > 0 ? '60px' : ''
+      this.$refs.list.$el.style.bottom = bottom
+      this.$refs.list.refresh()
+    },
+    scroll (pos) {
+      this.scrollY = pos.y
+    },
+    back () {
+      this.$router.back()
+    },
+    selectItem (item, index) {
+      this.selectPlay({
+        list: this.songs,
+        index: index
+      })
+    },
+    random () {
+      this.randomPlay({
+        list: this.songs
+      })
+    },
+    ...mapActions([
+      'selectPlay',
+      'randomPlay'
+    ])
+  },
+  created () {
+    this.probeType = 3
+    this.listenScroll = true
+  },
+  mounted () {
+    this.imageHeight = this.$refs.bgImg.clientHeight
+    this.minTranslateY = -this.imageHeight + RESERVED_HEIGHT
+    this.$refs.list.$el.style.top = `${this.$refs.bgImg.clientHeight}px`
+  },
+  watch: {
+    scrollY (newY) {
+      let translateY = Math.max(this.minTranslateY, newY)
+      let zIndex = 0
+      let scale = 1
+      let blur = 0
+      this.$refs.layer.style[transform] = `translate3d(0, ${translateY}px, 0)`
+      const percent = Math.abs(newY / this.minTranslateY)
+      if (newY > 0) {
+        scale = 1 + percent
+        zIndex = 11
+      } else {
+        blur = Math.min(20 * percent, 20)
+      }
+      this.$refs.filter.style[backdrop] = `blur(${blur}px)`
+      if (newY < this.minTranslateY) {
+        zIndex = 11
+        this.$refs.bgImg.style.paddingTop = 0
+        this.$refs.bgImg.style.height = `${RESERVED_HEIGHT}px`
+        this.$refs.play.style.display = 'none'
+      } else {
+        this.$refs.bgImg.style.paddingTop = '70%'
+        this.$refs.bgImg.style.height = 0
+        this.$refs.play.style.display = ''
+      }
+      this.$refs.bgImg.style.zIndex = zIndex
+      this.$refs.bgImg.style[transform] = `scale(${scale})`
+    }
+  },
+  components: {
+    SongList,
+    Scroll,
+    Loading
+  }
+}
+</script>
+
+<style lang="stylus" scoped>
+@import '../../common/stylus/variable.styl'
+.music-list
+  position: fixed
+  z-index: 100
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  .back
+    position: absolute
+    top: 0
+    width: 40px
+    height: 40px
+    line-height: 40px
+    text-align: center
+    font-size: $font-size-large-x
+    z-index: 12
+  .title
+    position: absolute
+    top: 0
+    left: 10%
+    width: 80%
+    height: 40px
+    line-height: 40px
+    text-align: center
+    font-size: $font-size-large
+    z-index: 12
+  .bg-image
+    position: relative
+    padding-top: 70%
+    background-size: 100%
+    .play-wrapper
+      position: absolute
+      bottom: 20px
+      width: 100%
+      text-align: center
+      z-index: 10
+      .play
+        width: 135px
+        display: flex
+        align-items: center
+        justify-content: center
+        margin: 0 auto
+        padding: 6px 0
+        border: 1px solid $color-theme
+        border-radius: 32px
+        .icon-play
+          font-size: $font-size-large
+        .text-play
+          padding-left: 5px
+          font-size: $font-size-small
+    .filter
+      position: absolute
+      top: 0
+      left: 0
+      width: 100%
+      height: 100%
+      background: $color-image-filter
+      z-index: 9
+  .list
+    position: absolute
+    top: 0
+    bottom: 0
+    width: 100%
+    z-index: 10
+    background: $color-background
+  .bg-layer
+    position: relative
+    height: 100%
+    z-index: 10
+    background: $color-background
+</style>

@@ -1,19 +1,38 @@
 <template>
   <div id="app">
-    <div id="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
-    </div>
-    <router-view/>
+    <cm-header></cm-header>
+    <tab></tab>
+    <keep-alive>
+      <router-view></router-view>
+    </keep-alive>
+    <player></player>
   </div>
 </template>
 
+<script>
+import CmHeader from 'components/cm-header/cm-header'
+import Tab from 'components/tab/tab'
+import Player from 'components/player/player'
+import { getPurl } from '@/api/singer'
+
+export default {
+  name: 'app',
+  created () {
+    getPurl().then((res) => {
+      console.log(res)
+    })
+  },
+  components: {
+    CmHeader,
+    Tab,
+    Player
+  }
+}
+</script>
+
 <style lang="stylus">
+@import 'common/stylus/variable.styl'
 #app
-  font-family 'Avenir', Helvetica, Arial, sans-serif
-  -webkit-font-smoothing antialiased
-  -moz-osx-font-smoothing grayscale
-  text-align center
-  color #2c3e50
-  margin-top 60px
+  color: $color-theme
+  height: 100%
 </style>
